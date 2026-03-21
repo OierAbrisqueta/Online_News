@@ -67,7 +67,7 @@ data_clean <- data_clean[, !names(data_clean) %in% c("n_non_stop_words")]
 
 data_clean <- data_clean %>%
   filter(n_tokens_content<=2247,
-         n_unique_tokens<=700,
+         n_unique_tokens<=1,
          n_non_stop_unique_tokens>=0.25,
          num_hrefs<=52,
          num_imgs<=33,
@@ -79,4 +79,8 @@ boxplot(data_clean$kw_min_min)
 summary(data_clean$kw_min_min)
 quantile(data_clean$kw_min_min, probs = c(0.25, 0.5, 0.75, 0.95, 0.99, 0.995))
 nrow(data_clean)
+
+#Articles with 0 words and all null values are deleted
+data_clean <- data_clean %>% filter(n_tokens_content > 0)
+summary(data_clean)
 
