@@ -12,7 +12,7 @@ quantile(data$shares, probs = c(0.25, 0.5, 0.75, 0.95))
 
 # Nos quedamos con el 95%
 data_clean <- data %>%
-  filter(shares<10800)
+  filter(shares<=10800)
 
 # En el histograma podemos ver que es asimetrico (right skew) porque la media es mayor a la mediana.
 boxplot(data_clean$shares)
@@ -72,3 +72,28 @@ data_clean <- data_clean[, !(names(data_clean) %in% weekdays)]
 
 class(data_clean$day_of_week)
 head(data_clean)
+
+summary(data_clean)
+
+# Varibles de conteo
+
+# n_tokens_content n_unique_tokens n_non_stop_words    n_non_stop_unique_tokens   num_hrefs 
+# num_self_hrefs num_imgs num_videos self_reference_min_shares self_reference_max_shares 
+# self_reference_avg_sharess 
+
+data_clean <- data_clean[, !names(data_clean) %in% c("n_non_stop_words")]
+
+data_clean <- data_clean %>%
+  filter(n_tokens_content<=2247,
+         n_unique_tokens<=700,
+         n_non_stop_unique_tokens>=0.25,
+         num_hrefs<=52,
+         num_imgs<=33,
+         num_videos<=21,
+         self_reference_min_shares<=50200,
+         self_reference_max_shares<=83300)
+
+#boxplot(data_clean$self_reference_max_shares)
+#summary(data_clean$self_reference_max_shares)
+#quantile(data_clean$self_reference_max_shares, probs = c(0.25, 0.5, 0.75, 0.95, 0.99, 0.995))
+nrow(data_clean)
