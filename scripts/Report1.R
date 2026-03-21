@@ -88,7 +88,24 @@ summary(data_clean)
 data_clean <- data_clean[, !names(data_clean) %in% c("kw_min_min")]
 summary(data_clean)
 
+#Remove the timedelta column. It represents the days from the article publication and the dataset creation. Even the UCI consideres it non-predictive
+data_clean <- data_clean[, !names(data_clean) %in% c("timedelta")]
+summary(data_clean)
 
+#741 articles have a negative kw_avg_min value and 633 of them are -1. It represents again an unknown value, the rest negatives that are not -1
+#are articles that have some valid keywords and some unkowns. We recode to NA.
+data_clean$kw_avg_min[data_clean$kw_avg_min < 0] <- NA 
+summary(data_clean)
 
+#The column kw_min_avg has 5 unkown values
+data_clean <- data_clean %>% filter(kw_min_avg >= 0)
+summary(data_clean)
 
-
+#The histogram shows shares are still right skewed
+hist(data_clean$shares)
+#This is why we create a log_shares column
+data_clean$log_shares <- log(data_clean$shares)
+summary(data_clean)
+#We can see that now it is left skewed this happens because of the articles that
+#have very few shares. This articles can be filtered in the future if needed.
+hist(data_clean$log_shares)
