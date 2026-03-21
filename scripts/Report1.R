@@ -79,7 +79,8 @@ summary(data_clean)
 
 # n_tokens_content n_unique_tokens n_non_stop_words    n_non_stop_unique_tokens   num_hrefs 
 # num_self_hrefs num_imgs num_videos self_reference_min_shares self_reference_max_shares 
-# self_reference_avg_sharess 
+# self_reference_avg_sharess kw_min_min kw_max_min kw_avg_min kw_min_max kw_max_max
+# kw_avg_max kw_min_avg kw_max_avg kw_avg_avg 
 
 data_clean <- data_clean[, !names(data_clean) %in% c("n_non_stop_words")]
 
@@ -93,7 +94,8 @@ data_clean <- data_clean %>%
          self_reference_min_shares<=50200,
          self_reference_max_shares<=83300)
 
-#boxplot(data_clean$self_reference_max_shares)
-#summary(data_clean$self_reference_max_shares)
-#quantile(data_clean$self_reference_max_shares, probs = c(0.25, 0.5, 0.75, 0.95, 0.99, 0.995))
+boxplot(data_clean$kw_min_min)
+summary(data_clean$kw_min_min)
+quantile(data_clean$kw_min_min, probs = c(0.25, 0.5, 0.75, 0.95, 0.99, 0.995))
 nrow(data_clean)
+
