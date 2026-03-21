@@ -84,3 +84,11 @@ nrow(data_clean)
 data_clean <- data_clean %>% filter(n_tokens_content > 0)
 summary(data_clean)
 
+#Remove the column kw_min_min because 55% of the total articles has an unknown value (-1)
+data_clean <- data_clean[, !names(data_clean) %in% c("kw_min_min")]
+summary(data_clean)
+
+
+
+
+
