@@ -1,6 +1,8 @@
 library(dplyr)
 
-data <- read.csv("./data/OnlineNewsPopularity.csv", strip.white=T)
+setwd("./data")
+
+data <- read.csv("OnlineNewsPopularity.csv", strip.white=T)
 
 head(data)
 summary(data)
@@ -24,27 +26,6 @@ plot(d)
 
 
 # CATEGORICAL DATA
-# variables de tipos de data channel
-data_channel_types <- c('data_channel_is_lifestyle', 'data_channel_is_entertainment', 
-                        'data_channel_is_bus', 'data_channel_is_socmed', 
-                        'data_channel_is_tech', 'data_channel_is_world')
-
-
-data_clean$channel <- names(data_clean[, data_channel_types])[max.col(data_clean[, data_channel_types])]
-
-data_clean$channel <- gsub("data_channel_is_", "", data_clean$channel)
-
-data_clean$channel <- as.factor(data_clean$channel)
-data_clean$channel <- gsub("bus", "business", data_clean$channel)
-
-data_clean$channel <- as.factor(data_clean$channel)
-
-unique(data_clean$channel)
-class(data_clean$channel)
-
-data_clean <- data_clean[, !(names(data_clean) %in% data_channel_types)]
-
-head(data_clean)
 
 # Variables de días de la semana
 weekdays <- c(
