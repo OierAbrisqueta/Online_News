@@ -125,6 +125,24 @@ data_clean <- data_clean %>% select(-n_unique_tokens)
 # By comparing the two columns , we see that the different between the these two columns is very similar in all the observations 
 # The result is to eliminate n_unique_tokens since it includes separators or "stop words" 
 
+kw_variables <- data_clean %>% select(starts_with("kw"))
+correlation_matrix <- cor(kw_variables,use="complete.obs")
+matrix_pairs <- as.data.frame(as.table(correlation_matrix))
+matrix_pairs <- matrix_pairs %>% 
+  mutate (Var1 = as.character(Var1) , Var2 = as.character(Var2) )%>% 
+  filter(Var1 != Var2, abs(Freq) >= 0.8, abs(Freq) <= 0.99) %>%
+  arrange(desc(abs(Freq)))
+
+# We build a correlation matrix with all variables related to the keywords to see if there is correlation
+# We see that between two of them there is a significant correlation.
+
+cor(data_clean$kw_avg_min,data_clean$log_shares,use="complete.obs")
+cor(data_clean$kw_max_min,data_clean$log_shares,use="complete.obs")
+
+data_clean <- data_clean %>% select(-kw_max_min)
+
+#Now we use the cor() function to see which variable is more correlated to the target variable 
+# As a result , we eliminate the one with less correlation which is kw_max_min
 
 
 ggplot(data_clean, aes(x = day_of_week, y = log_shares, fill = day_of_week)) +
