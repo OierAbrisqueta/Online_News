@@ -1,4 +1,6 @@
+
 library(dplyr)
+library(ggplot2)
 
 setwd("./data")
 
@@ -109,3 +111,27 @@ summary(data_clean)
 #We can see that now it is left skewed this happens because of the articles that
 #have very few shares. This articles can be filtered in the future if needed.
 hist(data_clean$log_shares)
+
+colnames(data_clean)
+
+print(data_clean[,c("n_unique_tokens","n_non_stop_unique_tokens")])
+summary(data_clean$n_unique_tokens)
+summary(data_clean$n_non_stop_unique_tokens)
+cor(data_clean$n_unique_tokens, data_clean$n_non_stop_unique_tokens, use="complete.obs")
+
+data_clean <- data_clean %>% select(-n_unique_tokens)
+
+#N_unique_tokens and n_non_stop_unique_tokens carry redundant information as it is seen by using the correlation of variables.
+# By comparing the two columns , we see that the different between the these two columns is very similar in all the observations 
+# The result is to eliminate n_unique_tokens since it includes separators or "stop words" 
+
+
+
+ggplot(data_clean, aes(x = day_of_week, y = log_shares, fill = day_of_week)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Share distribution by weekday")
+
+#To introduce the possibility of doing a linear model using as predictor the day of the week we use
+# this grouped boxplot to see the difference in shares between the different weekdays
+# As it is seen , there is a significant difference between weekends and the other days.
