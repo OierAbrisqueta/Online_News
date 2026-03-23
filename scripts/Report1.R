@@ -9,14 +9,6 @@ data <- read.csv("OnlineNewsPopularity.csv", strip.white=T)
 head(data)
 summary(data)
 
-# SHARES
-boxplot(data$shares)
-summary(data$shares)
-quantile(data$shares, probs = c(0.25, 0.5, 0.75, 0.95))
-
-# Nos quedamos con el 95%
-data_clean <- data %>%
-  filter(shares<=10800)
 
 # En el histograma podemos ver que es asimetrico (right skew) porque la media es mayor a la mediana.
 boxplot(data_clean$shares)
@@ -150,11 +142,3 @@ data_clean <- data_clean %>% select(-kw_max_min)
 # As a result , we eliminate the one with less correlation which is kw_max_min
 
 
-ggplot(data_clean, aes(x = day_of_week, y = log_shares, fill = day_of_week)) +
-  geom_boxplot() +
-  theme_minimal() +
-  labs(title = "Share distribution by weekday")
-
-#To introduce the possibility of doing a linear model using as predictor the day of the week we use
-# this grouped boxplot to see the difference in shares between the different weekdays
-# As it is seen , there is a significant difference between weekends and the other days.
