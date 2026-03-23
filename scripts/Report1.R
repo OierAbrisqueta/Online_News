@@ -1,4 +1,3 @@
-
 library(dplyr)
 library(ggplot2)
 
@@ -9,6 +8,7 @@ data <- read.csv("OnlineNewsPopularity.csv", strip.white=T)
 head(data)
 summary(data)
 
+data_clean <- data 
 
 # En el histograma podemos ver que es asimetrico (right skew) porque la media es mayor a la mediana.
 boxplot(data_clean$shares)
@@ -33,6 +33,8 @@ weekday_labels <- c(
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
   'Saturday', 'Sunday'
 )
+
+data_clean <- data
 
 data_clean$day_of_week <- names(data_clean[, weekdays])[max.col(data_clean[, weekdays])]
 
@@ -111,10 +113,10 @@ summary(data_clean$n_unique_tokens)
 summary(data_clean$n_non_stop_unique_tokens)
 cor(data_clean$n_unique_tokens, data_clean$n_non_stop_unique_tokens, use="complete.obs")
 
-cor(data_clean$n_unique_tokens,data_clean$shares)
-cor(data_clean$n_non_stop_unique_tokens,data_clean$shares)
+cor(data_clean$n_unique_tokens,data_clean$log_shares,use="complete.obs")
+cor(data_clean$n_non_stop_unique_tokens,data_clean$log_shares,use="complete.obs")
 
-data_clean <- data_clean %>% select(-n_non_stop_unique_tokens)
+data_clean <- data_clean %>% select(-n_unique_tokens)
 
 #N_unique_tokens and n_non_stop_unique_tokens carry redundant information as it is seen by using the correlation of variables.
 # By comparing the two columns , we see that the different between the these two columns is very similar in all the observations 
@@ -126,7 +128,7 @@ matrix_pairs <- as.data.frame(as.table(correlation_matrix))
 matrix_pairs <- matrix_pairs %>% 
   mutate (Var1 = as.character(Var1) , Var2 = as.character(Var2) )%>% 
   filter(Var1 != Var2, abs(Freq) >= 0.8, abs(Freq) <= 0.99) %>%
-  arrange(desc(abs(Freq)))
+  arrange(desc(abs(Freq))) 
 
 print(matrix_pairs)
 
@@ -151,4 +153,47 @@ matrix_pairs <- matrix_pairs %>%
   filter(Var1 != Var2, abs(Freq) >= 0.8, abs(Freq) <= 0.99) %>%
   arrange(desc(abs(Freq)))
 
-print((matrix_pairs))
+print(matrix_pairs)
+
+#We analyze if variables regarding polarity had a significant correlation between them , resulting negative
+
+
+data_clean <- data_clean %>% rename(self_reference_avg_shares = self_reference_avg_sharess) # This column had an incorrect name
+
+subjectivity_vars <- data_clean %>% select(contains("subjectivity"))
+cor(subjectivity_vars, use="complete.obs")
+
+#We analyze if variables regarding subjetivity had a significant correlation between them , resulting negative
+
+cor(data_clean[, c("self_reference_min_shares", "self_reference_max_shares", "self_reference_avg_shares")], use="complete.obs")
+
+#Analyzing the correlation of variables regarding self_reference we observed that self_reference_avg_shares
+#had a significant correlation ( >0.8) with the other two variables . The decision made in this point will depend on the
+# correlation between these variables and the target variables
+
+cor(data_clean$self_reference_avg_shares,data_clean$log_shares)
+cor(data_clean$self_reference_min_shares,data_clean$log_shares)
+cor(data_clean$self_reference_max_shares,data_clean$log_shares)
+
+# As self_reference_avg_shares has a stronger correlation with log_shares the decision is to eliminate the other two
+#variables : self_reference_min_shares and self_reference_max_shares.
+
+
+cor(data_clean[, c("global_rate_positive_words", "global_rate_negative_words",
+                   "rate_positive_words", "rate_negative_words")], use="complete.obs")
+
+# Analyzing these variables of positive and negative word rate we observed a very extreme correlation value (>0.99)
+#between global_rate_positive_words and global_rate_negative_words so , as before , we will compare each variable to the target
+
+cor(data_clean$global_rate_negative_words,data_clean$log_shares)
+cor(data_clean$global_rate_positive_words,data_clean$log_shares)
+
+# The decision based on the correlation coefficients it to eliminate global_rate_negative_words 
+
+lda_vars <- data_clean %>% select(starts_with("LDA"))
+cor(lda_vars, use="complete.obs")
+
+#We analyze if variables regarding LDA topics had a significant correlation between them , resulting negative
+
+data_clean <- data_clean %>% select(-global_rate_negative_words,-self_reference_min_shares,-self_reference_max_shares)
+
