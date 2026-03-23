@@ -119,7 +119,10 @@ summary(data_clean$n_unique_tokens)
 summary(data_clean$n_non_stop_unique_tokens)
 cor(data_clean$n_unique_tokens, data_clean$n_non_stop_unique_tokens, use="complete.obs")
 
-data_clean <- data_clean %>% select(-n_unique_tokens)
+cor(data_clean$n_unique_tokens,data_clean$shares)
+cor(data_clean$n_non_stop_unique_tokens,data_clean$shares)
+
+data_clean <- data_clean %>% select(-n_non_stop_unique_tokens)
 
 #N_unique_tokens and n_non_stop_unique_tokens carry redundant information as it is seen by using the correlation of variables.
 # By comparing the two columns , we see that the different between the these two columns is very similar in all the observations 
@@ -132,6 +135,8 @@ matrix_pairs <- matrix_pairs %>%
   mutate (Var1 = as.character(Var1) , Var2 = as.character(Var2) )%>% 
   filter(Var1 != Var2, abs(Freq) >= 0.8, abs(Freq) <= 0.99) %>%
   arrange(desc(abs(Freq)))
+
+print(matrix_pairs)
 
 # We build a correlation matrix with all variables related to the keywords to see if there is correlation
 # We see that between two of them there is a significant correlation.
