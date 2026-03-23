@@ -140,5 +140,3 @@ data_clean <- data_clean %>% select(-kw_max_min)
 
 #Now we use the cor() function to see which variable is more correlated to the target variable 
 # As a result , we eliminate the one with less correlation which is kw_max_min
-
-
