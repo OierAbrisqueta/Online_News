@@ -140,3 +140,15 @@ data_clean <- data_clean %>% select(-kw_max_min)
 
 #Now we use the cor() function to see which variable is more correlated to the target variable 
 # As a result , we eliminate the one with less correlation which is kw_max_min
+
+
+polarity_variables <- data_clean %>% select(ends_with("polarity"))
+
+correlation_matrix <- cor(polarity_variables,use="complete.obs")
+matrix_pairs <- as.data.frame(as.table(correlation_matrix))
+matrix_pairs <- matrix_pairs %>% 
+  mutate (Var1 = as.character(Var1) , Var2 = as.character(Var2) )%>% 
+  filter(Var1 != Var2, abs(Freq) >= 0.8, abs(Freq) <= 0.99) %>%
+  arrange(desc(abs(Freq)))
+
+print((matrix_pairs))
