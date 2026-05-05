@@ -1,0 +1,295 @@
+library(dplyr)
+library(ggplot2)
+
+setwd("./data")
+
+data <- read.csv("OnlineNewsPopularity.csv", strip.white=T)
+
+head(data)
+summary(data)
+
+quantile(data$shares,c(0.05,0.25,0.5,0.75,0.95,0.995))
+
+data_clean <- data
+nrow(data_clean)
+
+
+# En el histograma podemos ver que es asimetrico (right skew) porque la media es mayor a la mediana.
+boxplot(data_clean$shares)
+hist(data_clean$shares)
+
+d <- density(data_clean$shares)
+
+plot(d)
+
+
+# CATEGORICAL DATA
+
+# Variables de días de la semana
+weekdays <- c(
+  'weekday_is_monday', 'weekday_is_tuesday', 'weekday_is_wednesday',
+  'weekday_is_thursday', 'weekday_is_friday', 'weekday_is_saturday',
+  'weekday_is_sunday'
+)
+
+# Crear una columna con categorica para el dia de la semana que sea
+weekday_labels <- c(
+  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
+  'Saturday', 'Sunday'
+)
+
+data_clean$day_of_week <- names(data_clean[, weekdays])[max.col(data_clean[, weekdays])]
+
+data_clean$day_of_week <- gsub("weekday_is_", "", data_clean$day_of_week)
+
+data_clean$day_of_week <- factor(data_clean$day_of_week, 
+                                 levels = c("monday", "tuesday", "wednesday", "thursday", 
+                                            "friday", "saturday", "sunday"),
+                                 labels = weekday_labels)
+
+data_clean <- data_clean[, !(names(data_clean) %in% weekdays)]
+
+class(data_clean$day_of_week)
+head(data_clean)
+
+summary(data_clean)
+
+# Varibles de conteo
+
+# n_tokens_content n_unique_tokens n_non_stop_words    n_non_stop_unique_tokens   num_hrefs 
+# num_self_hrefs num_imgs num_videos self_reference_min_shares self_reference_max_shares 
+# self_reference_avg_sharess kw_min_min kw_max_min kw_avg_min kw_min_max kw_max_max
+# kw_avg_max kw_min_avg kw_max_avg kw_avg_avg 
+
+data_clean <- data_clean[, !names(data_clean) %in% c("n_non_stop_words")]
+
+data_clean <- data_clean %>%
+  filter(n_tokens_content<=2247,
+         n_unique_tokens<=1,
+         n_non_stop_unique_tokens>=0.25,
+         num_hrefs<=52,
+         num_imgs<=33,
+         num_videos<=21,
+         self_reference_min_shares<=50200,
+         self_reference_max_shares<=83300)
+
+boxplot(data_clean$kw_min_min)
+summary(data_clean$kw_min_min)
+quantile(data_clean$kw_min_min, probs = c(0.25, 0.5, 0.75, 0.95, 0.99, 0.995))
+nrow(data_clean)
+
+#Articles with 0 words and all null values are deleted
+data_clean <- data_clean %>% filter(n_tokens_content > 0)
+summary(data_clean)
+
+#Remove the column kw_min_min because 55% of the total articles has an unknown value (-1)
+data_clean <- data_clean[, !names(data_clean) %in% c("kw_min_min")]
+summary(data_clean)
+
+#Remove the timedelta column. It represents the days from the article publication and the dataset creation. Even the UCI consideres it non-predictive
+data_clean <- data_clean[, !names(data_clean) %in% c("timedelta")]
+summary(data_clean)
+
+#741 articles have a negative kw_avg_min value and 633 of them are -1. It represents again an unknown value, the rest negatives that are not -1
+#are articles that have some valid keywords and some unkowns. We recode to NA.
+data_clean$kw_avg_min[data_clean$kw_avg_min < 0] <- NA 
+summary(data_clean)
+
+#The column kw_min_avg has 5 unkown values
+data_clean <- data_clean %>% filter(kw_min_avg >= 0)
+summary(data_clean)
+
+#The histogram shows shares are still right skewed
+hist(data_clean$shares)
+#This is why we create a log_shares column
+data_clean$log_shares <- log(data_clean$shares)
+summary(data_clean)
+#We can see that now it is left skewed this happens because of the articles that
+#have very few shares. This articles can be filtered in the future if needed.
+hist(data_clean$log_shares)
+
+colnames(data_clean)
+
+print(data_clean[,c("n_unique_tokens","n_non_stop_unique_tokens")])
+summary(data_clean$n_unique_tokens)
+summary(data_clean$n_non_stop_unique_tokens)
+cor(data_clean$n_unique_tokens, data_clean$n_non_stop_unique_tokens, use="complete.obs")
+
+cor(data_clean$n_unique_tokens,data_clean$log_shares,use="complete.obs")
+cor(data_clean$n_non_stop_unique_tokens,data_clean$log_shares,use="complete.obs")
+
+data_clean <- data_clean %>% select(-n_unique_tokens)
+
+#N_unique_tokens and n_non_stop_unique_tokens carry redundant information as it is seen by using the correlation of variables.
+# By comparing the two columns , we see that the different between the these two columns is very similar in all the observations 
+# The result is to eliminate n_unique_tokens since it includes separators or "stop words" 
+
+kw_variables <- data_clean %>% select(starts_with("kw"))
+correlation_matrix <- cor(kw_variables,use="complete.obs")
+matrix_pairs <- as.data.frame(as.table(correlation_matrix))
+matrix_pairs <- matrix_pairs %>% 
+  mutate (Var1 = as.character(Var1) , Var2 = as.character(Var2) )%>% 
+  filter(Var1 != Var2, abs(Freq) >= 0.8, abs(Freq) <= 0.99) %>%
+  arrange(desc(abs(Freq))) 
+
+print(matrix_pairs)
+
+# We build a correlation matrix with all variables related to the keywords to see if there is correlation
+# We see that between two of them there is a significant correlation.
+
+cor(data_clean$kw_avg_min,data_clean$log_shares,use="complete.obs")
+cor(data_clean$kw_max_min,data_clean$log_shares,use="complete.obs")
+
+data_clean <- data_clean %>% select(-kw_max_min)
+
+#Now we use the cor() function to see which variable is more correlated to the target variable 
+# As a result , we eliminate the one with less correlation which is kw_max_min
+
+
+polarity_variables <- data_clean %>% select(ends_with("polarity"))
+
+correlation_matrix <- cor(polarity_variables,use="complete.obs")
+matrix_pairs <- as.data.frame(as.table(correlation_matrix))
+matrix_pairs <- matrix_pairs %>% 
+  mutate (Var1 = as.character(Var1) , Var2 = as.character(Var2) )%>% 
+  filter(Var1 != Var2, abs(Freq) >= 0.8, abs(Freq) <= 0.99) %>%
+  arrange(desc(abs(Freq)))
+
+print(matrix_pairs)
+
+#We analyze if variables regarding polarity had a significant correlation between them , resulting negative
+
+
+data_clean <- data_clean %>% rename(self_reference_avg_shares = self_reference_avg_sharess) # This column had an incorrect name
+
+subjectivity_vars <- data_clean %>% select(contains("subjectivity"))
+cor(subjectivity_vars, use="complete.obs")
+
+#We analyze if variables regarding subjetivity had a significant correlation between them , resulting negative
+
+cor(data_clean[, c("self_reference_min_shares", "self_reference_max_shares", "self_reference_avg_shares")], use="complete.obs")
+
+#Analyzing the correlation of variables regarding self_reference we observed that self_reference_avg_shares
+#had a significant correlation ( >0.8) with the other two variables . The decision made in this point will depend on the
+# correlation between these variables and the target variables
+
+cor(data_clean$self_reference_avg_shares,data_clean$log_shares)
+cor(data_clean$self_reference_min_shares,data_clean$log_shares)
+cor(data_clean$self_reference_max_shares,data_clean$log_shares)
+
+# As self_reference_avg_shares has a stronger correlation with log_shares the decision is to eliminate the other two
+#variables : self_reference_min_shares and self_reference_max_shares.
+
+
+cor(data_clean[, c("global_rate_positive_words", "global_rate_negative_words",
+                   "rate_positive_words", "rate_negative_words")], use="complete.obs")
+
+# Analyzing these variables of positive and negative word rate we observed a very extreme correlation value (>0.99)
+#between global_rate_positive_words and global_rate_negative_words so , as before , we will compare each variable to the target
+
+cor(data_clean$global_rate_negative_words,data_clean$log_shares)
+cor(data_clean$global_rate_positive_words,data_clean$log_shares)
+
+# The decision based on the correlation coefficients it to eliminate global_rate_negative_words 
+
+lda_vars <- data_clean %>% select(starts_with("LDA"))
+cor(lda_vars, use="complete.obs")
+
+#We analyze if variables regarding LDA topics had a significant correlation between them , resulting negative
+
+data_clean <- data_clean %>% select(-global_rate_negative_words,-self_reference_min_shares,-self_reference_max_shares)
+
+#----------------------------------------------------------------
+# PCA : Principal component analysis
+#----------------------------------------------------------------
+
+#----------------Correlation study before PCA-----------------------
+
+colnames(data_clean)
+
+#To derive a PCA analysis , we want to focus on the content of the article so we are
+#going to study its correlations and select the variables according to this study.
+#This study is performed in order to remove redundancy of variables.
+
+
+# First, we compute the correlation matrix of the candidate variables
+candidate_vars <- data_clean %>%
+  select(n_tokens_content, num_hrefs, num_imgs, num_videos, num_keywords,
+         kw_avg_avg, kw_max_avg, kw_avg_min, kw_min_avg,
+         global_subjectivity, global_sentiment_polarity,
+         rate_positive_words, rate_negative_words,
+         avg_positive_polarity, min_positive_polarity, max_positive_polarity)
+
+cor_matrix <- cor(candidate_vars, use = "complete.obs")
+
+cor_matrix
+
+#Now , we evaluate the correlation matrix aiming to find highly correlated
+#pairs ( >0.75)
+
+high_cor <- which(abs(cor_matrix) > 0.75 & abs(cor_matrix) < 1, arr.ind = TRUE)
+high_cor
+
+#In this list , we have the pairs of variables which are higly correlated. To decide
+#which one to keep , we compare the correlation of each component of the pair to the target
+#variable : log_shares
+
+cor(data_clean$kw_max_avg,data_clean$log_shares)
+cor(data_clean$kw_avg_avg,data_clean$log_shares)
+
+# kw_avg_avg has higher correlation with log_shares -> we remove kw_max_avg
+
+cor(data_clean$rate_positive_words,data_clean$log_shares)
+cor(data_clean$rate_negative_words,data_clean$log_shares)
+
+# Very similar -> we remove rate_negative_words
+
+cor(data_clean$global_sentiment_polarity,data_clean$log_shares)
+cor(data_clean$rate_negative_words,data_clean$log_shares)
+
+#We have already removed rate_negative_words
+
+cor(data_clean$global_sentiment_polarity,data_clean$log_shares)
+cor(data_clean$rate_positive_words,data_clean$log_shares)
+
+# global_sentiment_polarity has higher correlation -> we remove rate_positive_words
+
+# Final set of variables for PCA (13 variables):
+# n_tokens_content, num_hrefs, num_imgs, num_videos, num_keywords,
+# kw_avg_avg, kw_avg_min, kw_min_avg, global_subjectivity,
+# global_sentiment_polarity, avg_positive_polarity,
+# min_positive_polarity, max_positive_polarity
+
+pca_vars <- candidate_vars %>% select(-rate_positive_words,-rate_negative_words,-kw_max_avg)
+
+colnames(pca_vars)
+
+#-----------------------Deriving PC´s------------------------------
+
+
+pca_vars <- pca_vars %>% na.omit() #We omit the NA values as they generate problems when building the following matrices
+
+X <- scale(pca_vars) #To derive principal components , we need all variables to be standardised
+
+S <- cor(X) #We build the sample correlation matrix (same as covariance matrix when standardised)
+
+E <- eigen(S) #We compute eigenvalues and eigenvectors of the matrix S
+
+PCloadings <- E$vectors # The loadings are the eigenvectors of the matrix S 
+
+rownames(PCloadings) <- colnames(pca_vars) # To remind us of the interpretation of PC loadings as coefficients of the standardised variables 
+# in the linear combinations defining each PC, we rename rows appropiately
+
+PCs <- X %*% PCloadings #We compute the principal components by the matrix multiplication of X and the loadings
+
+variance_explained <- 100 * E$values / sum(E$values) 
+cum_variance_explained <- cumsum(variance_explained)
+
+# Creating the scree plot comparing cummulative variance explained and variance explained by each of the
+#principal components
+
+plot(cum_variance_explained,type="b",col="blue",ylim=c(0,100),xlab="Component index",ylab="Percentage",xaxt="n")
+lines(variance_explained,type="b",col="red")
+axis(1,at=1:length(cum_variance_explained))
+legend(7.4, 60, legend=c("Cumul. variance explained", "Variance explained"),
+       col=c("blue", "red"), lty=1:2, cex=0.8)
