@@ -278,14 +278,16 @@ E <- eigen(S) #We compute eigenvalues and eigenvectors of the matrix S
 PCloadings <- E$vectors # The loadings are the eigenvectors of the matrix S 
 
 rownames(PCloadings) <- colnames(pca_vars) # To remind us of the interpretation of PC loadings as coefficients of the standardised variables 
-# in the linear combinations defining each PC, we rename rows appropiately
+# in the linear combinations defining each PC, we rename rows appropriately
 
 PCs <- X %*% PCloadings #We compute the principal components by the matrix multiplication of X and the loadings
 
 variance_explained <- 100 * E$values / sum(E$values) 
 cum_variance_explained <- cumsum(variance_explained)
 
-# Creating the scree plot comparing cummulative variance explained and variance explained by each of the
+#-----------------------PC analysis and interpretation------------------------------
+
+# Creating the scree plot comparing cumulative variance explained and variance explained by each of the
 #principal components
 
 plot(cum_variance_explained,type="b",col="blue",ylim=c(0,100),xlab="Component index",ylab="Percentage",xaxt="n")
@@ -293,3 +295,159 @@ lines(variance_explained,type="b",col="red")
 axis(1,at=1:length(cum_variance_explained))
 legend(7.4, 60, legend=c("Cumul. variance explained", "Variance explained"),
        col=c("blue", "red"), lty=1:2, cex=0.8)
+
+# The scree (or elbow) plot reveals that no single component dominates the variance explanation,
+#The first component explains approximately 20% of the total variance,
+# and the curve flattens gradually without a clear elbow point.Therefore , we decide to select components
+#based on the 80% criterion . This criterion consists on selecting the components that together
+#(looking at the cumulative variance) explain >=80% of the total variance
+#In this case , this point is the 7th component so we select the first 7 components,
+# which together explain nearly 80% of the total variance while reducing the
+# dimensionality from 13 variables to 7 components (a 46% reduction).
+
+PCs_final <- PCs[,1:7]
+PCs_final
+
+# Scaled PC loadings give us the correlation between the principal components and the
+# original variables. This is helpful to identify which variables drive each of the
+# principal components.
+
+scaled_loadings <- PCloadings
+for (j in 1:ncol(PCloadings)){
+  scaled_loadings[,j] <- sqrt(E$values[j]) * PCloadings[,j]
+}
+
+# We focus on the final components (first 7)
+round(scaled_loadings[, 1:7], 3)
+
+round(variance_explained[1:7],2)
+
+# PC1 -> Positive polarity and subjectivity (20.14% of variance explained)
+# The variables with highest correlation are avg_positive_polarity (-0.739),
+# max_positive_polarity (-0.735) and global_subjectivity (-0.577).
+# All correlations are negative, which means that articles with high scores on PC1
+# tend to have less positive and less subjective content.
+
+# PC2 -> Article length and minimum positive polarity (14.35% of variance explained)
+# The variables with highest correlation are n_tokens_content (-0.741) and
+# min_positive_polarity (0.674). This component give us information about the
+#length of the article in contrast with the minimum positive polarity
+
+# PC3 -> Keyword average popularity (12.17% of variance explained)
+# The variables with highest correlation are kw_avg_avg (-0.686) and
+# kw_min_avg (-0.657). This third component clearly captures information
+#about the average keyword popularity . As in the first component , the most relevant
+#correlations are negative meaning that articles with a high values on PC3
+#tend to have lower values on those two variables.
+
+# PC4 - Keyword usage (9.21% of variance explained)
+# The variables with highest correlation are num_keywords (-0.661) and
+# kw_avg_min (-0.637). This component captures how many keywords the
+# article has and the average of the minimum shares of its keywords.
+
+# PC5 -> Multimedia content (8.51% of variance explained)
+# The variables with highest correlation are num_videos (0.557) and
+# num_imgs (-0.558). This component contrasts articles with videos
+# against articles with images.
+
+# PC6 -> Video intensity (7.69% of variance explained)
+# Dominated by num_videos (0.716). This component shows information about articles
+# with a high number of videos.
+
+# PC7 -> Subjectivity tone (6.06% of variance explained)
+# Dominated by global_subjectivity (0.460). This component captures
+# subjectivity not explained by previous components.
+
+# After analyzing the correlations of each component, we can conclude that the majority
+# of the variance (~56%, captured by PC1 to PC4) is driven by sentiment-related variables
+# (positive polarity, subjectivity) and keyword popularity. This suggests that the
+# emotional tone and keyword strategy of an article are the most informative dimensions
+# in the dataset.
+
+# On the other hand, the last components (PC5 to PC7) are associated with multimedia
+# content (images and videos), which collectively explain a small fraction of the
+# total variance. This reinforces the idea that multimedia features contribute
+# relatively little to the overall structure of the data.
+
+#-----------------------Plotting individuals------------------------------
+
+#Due to dataset size , we take a sample of 1000 individuals to evaluate
+
+set.seed(123)
+index <- sample(1:nrow(PCs), 1000)
+
+plot(PCs[index, 1], PCs[index, 2],
+     type = "p",
+     pch = 16,
+     col = rgb(0, 0, 1, 0.3),
+     xlab = "PC1 (20.14%)",
+     ylab = "PC2(14.35%)",
+     main = "PCA - Projection of individuals (sample n=1,000)")
+abline(h = 0, v = 0, lty = 2)
+
+#The plot of individuals on PC1 and PC2 shows that most of the articles are concentrated
+#around the origin which is an indication of the majority of articles having average values
+#on article length , positive polarity and subjectivity.
+
+#Individuals are more scattered along PC1 , which is consistent with PC1 explaining a higher
+#percentage of variance . 
+
+#Some outliers are visible far from the origin , particularly along PC2 which indicate the existence
+#of articles with extreme values of article length and minimum positive polarity.
+
+#To reinforce the conclusions of above , we use summary to show the distribution of all individuals
+#and not only of the sample of 1000 visible in the plot
+
+summary(PCs[,1])  # Range of PC1
+summary(PCs[,2])  # Range of PC2
+
+# PC1 ranges from -14.80 to 7.02, with 50% of articles ranging between -1.05 and 1.11,
+# meaning that this 50% of articles are concentrated close to the origin.
+
+# PC2 ranges from -5.65 to 13.62, also with most articles close to the origin.
+
+#In both dimensions we see extreme values which correspond to this points far away from the
+#bulk of points , clearly visible in the plot.
+
+#-----------------------Plotting variables------------------------------
+
+#Now we are going to show the factor map of variables , which is very helpful
+#to know the correlation of the variables with the first two components in a 
+#visual way
+
+# Plotting variables (factor map of variables)
+plot(scaled_loadings[,1], scaled_loadings[,2],
+     xlim = c(-1, 1), ylim = c(-1, 1),
+     xlab = "PC1 (20.14%)", ylab = "PC2 (14.35%)",
+     main = "PCA - Projection of variables",
+     pch = 16, cex = 0.5)
+
+# Add the correlation circle
+symbols(0, 0, circles = 1, inches = FALSE, add = TRUE)
+
+# Add arrows from origin to each variable
+arrows(0, 0, scaled_loadings[,1], scaled_loadings[,2], length = 0.1)
+
+# Add variable names
+text(scaled_loadings[,1], scaled_loadings[,2],
+     labels = rownames(scaled_loadings),
+     cex = 0.7, pos = 3)
+
+# Add reference lines
+abline(h = 0, v = 0, lty = 2)
+
+#The factor map shows the projection of the 13 variables onto PC1 and PC2.
+#Variables which are closer to the origin (represented by the discontinuous lines)
+#are poorly represented by the principal component while variables closer to the 
+#edge of the circle (far away from origin) are better represented.
+
+#PC1 --> All arrows point to the left meaning that PC1 is negatively correlated with all
+#variables.The longest arrows along PC1 belong to avg_positive_polarity, max_positive_polarity 
+#and global_subjectivity, consistent with the correlation analysis performed earlier.
+
+#PC2 --> Along PC2 , in contrast with the situation of PC1 , we have arrows pointing up and down.
+#This means that PC2 is positively correlated with some variables and negatively with other ones.
+#Talking about arrows , the longest ones are min_positive_polarity pointing upward
+# and n_tokens_content and num_hrefs pointing downward, confirming that PC2
+# captures the opposition between article length and minimum positive polarity
+#(as said before in the correlation analysis)
