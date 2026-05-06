@@ -275,3 +275,39 @@ print(summary(ca_result))
 print("Varianza explicada por cada dimensión (inercia):")
 print(ca_result$eig)
 
+#---------- PASO 4: Representación gráfica e interpretación ----------
+
+# El factor map es el gráfico principal del CA.
+# Representa simultáneamente los días (filas) y los canales (columnas)
+# en el mismo espacio de dos dimensiones.
+# La interpretación clave es: cuando un día y un canal aparecen cerca el uno
+# del otro en el gráfico, significa que ese canal se publica más de lo esperado
+# ese día. Cuando están alejados del origen, la asociación es más fuerte.
+# Los puntos cerca del origen son "medios" o poco característicos.
+
+# Usamos fviz_ca_biplot() de factoextra para generar el factor map combinado.
+# Un "biplot" es un gráfico que muestra filas y columnas a la vez.
+fviz_ca_biplot(ca_result,
+               repel = TRUE,          # repel=TRUE evita que las etiquetas se solapen
+               title = "CA - Factor map: Día de publicación vs Canal temático")
+
+# Para mayor detalle, representamos filas y columnas por separado.
+
+# Solo los días de la semana (filas)
+fviz_ca_row(ca_result,
+            repel = TRUE,
+            title = "CA - Proyección de los días de la semana")
+
+# Solo los canales temáticos (columnas)
+fviz_ca_col(ca_result,
+            repel = TRUE,
+            title = "CA - Proyección de los canales temáticos")
+
+# Por último, mostramos las contribuciones de cada fila y columna a las dos
+# primeras dimensiones. Una contribución alta significa que ese día o canal
+# es el que más "define" o "arrastra" esa dimensión.
+print("Contribuciones de los días (filas) a las dimensiones:")
+print(round(ca_result$row$contrib, 3))
+
+print("Contribuciones de los canales (columnas) a las dimensiones:")
+print(round(ca_result$col$contrib, 3))
