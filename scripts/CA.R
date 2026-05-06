@@ -250,3 +250,28 @@ print(chi_test)
 cat("Grados de libertad esperados:", (nrow(contingency_table) - 1) * (ncol(contingency_table) - 1), "\n")
 
 # Si el p-valor es < 0.05, rechazamos H0 y concluimos que existe una relacion significativa
+print("Tabla esperada bajo independencia:")
+print(round(chi_test$expected, 1))
+
+#---------- PASO 3: Perfiles de fila, descomposición y factor map ----------
+
+# Calculamos y mostramos los perfiles de fila manualmente para entender qué hace CA()
+row_profiles <- prop.table(contingency_table, margin = 1) # margin=1 divide por totales de fila
+print("Perfiles de fila (proporción de canal por día):")
+print(round(row_profiles, 3))
+
+# Calculamos también los perfiles de columna (proporción de cada día por canal),
+# que nos permite ver qué días concentran más artículos de cada canal.
+col_profiles <- prop.table(contingency_table, margin = 2) # margin=2 divide por totales de columna
+print("Perfiles de columna (proporción de cada día por canal):")
+print(round(col_profiles, 3))
+
+# Ahora aplicamos la función CA() del paquete FactoMineR.
+# Esta función recibe la tabla de contingencia, realiza la descomposición del espacio de alta dimensión en nuevos componentes y genera automaticamente el factor map.
+ca_result <- CA(contingency_table, graph = FALSE)
+
+print(summary(ca_result))
+
+print("Varianza explicada por cada dimensión (inercia):")
+print(ca_result$eig)
+
