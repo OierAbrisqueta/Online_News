@@ -13,8 +13,6 @@ quantile(data$shares,c(0.05,0.25,0.5,0.75,0.95,0.995))
 data_clean <- data
 nrow(data_clean)
 
-
-# En el histograma podemos ver que es asimetrico (right skew) porque la media es mayor a la mediana.
 boxplot(data_clean$shares)
 hist(data_clean$shares)
 
@@ -25,14 +23,12 @@ plot(d)
 
 # CATEGORICAL DATA
 
-# Variables de días de la semana
 weekdays <- c(
   'weekday_is_monday', 'weekday_is_tuesday', 'weekday_is_wednesday',
   'weekday_is_thursday', 'weekday_is_friday', 'weekday_is_saturday',
   'weekday_is_sunday'
 )
 
-# Crear una columna con categorica para el dia de la semana que sea
 weekday_labels <- c(
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
   'Saturday', 'Sunday'
@@ -213,6 +209,7 @@ colnames(data_clean)
 
 
 # First, we compute the correlation matrix of the candidate variables
+
 candidate_vars <- data_clean %>%
   select(n_tokens_content, num_hrefs, num_imgs, num_videos, num_keywords,
          kw_avg_avg, kw_max_avg, kw_avg_min, kw_min_avg,
@@ -283,6 +280,7 @@ rownames(PCloadings) <- colnames(pca_vars) # To remind us of the interpretation 
 PCs <- X %*% PCloadings #We compute the principal components by the matrix multiplication of X and the loadings
 
 variance_explained <- 100 * E$values / sum(E$values) 
+variance_explained
 cum_variance_explained <- cumsum(variance_explained)
 
 #-----------------------PC analysis and interpretation------------------------------
@@ -293,7 +291,7 @@ cum_variance_explained <- cumsum(variance_explained)
 plot(cum_variance_explained,type="b",col="blue",ylim=c(0,100),xlab="Component index",ylab="Percentage",xaxt="n")
 lines(variance_explained,type="b",col="red")
 axis(1,at=1:length(cum_variance_explained))
-legend(7.4, 60, legend=c("Cumul. variance explained", "Variance explained"),
+legend(7.3, 60, legend=c("Cumul. variance explained", "Variance explained"),
        col=c("blue", "red"), lty=1:2, cex=0.8)
 
 # The scree (or elbow) plot reveals that no single component dominates the variance explanation,
