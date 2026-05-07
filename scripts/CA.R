@@ -3,7 +3,7 @@ library(FactoMineR)
 library(factoextra)
 
 
-setwd("./Online_News/data")
+setwd("./data")
 
 data <- read.csv("OnlineNewsPopularity.csv", strip.white=T)
 
