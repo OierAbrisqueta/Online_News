@@ -291,6 +291,21 @@ cat("Expected degrees of freedom:", (nrow(contingency_table) - 1) * (ncol(contin
 print("Expected table under independence:")
 print(round(chi_test$expected, 1))
 
+# --- INTERPRETATION: Chi-square test ---
+# The chi-square test returns X-squared = 44.73, with 30 degrees of freedom
+# and a p-value = 0.041.
+# Since the p-value is below the significance threshold of 0.05, we reject H0.
+# This means that the publication day and the thematic channel are NOT independent:
+# there is a statistically significant relationship between the two variables.
+# Therefore, it is meaningful to continue with the Correspondence Analysis.
+
+# Comparing the observed and expected tables, the most notable differences appear
+# on weekends (Saturday and Sunday). For example, Lifestyle articles are
+# over-represented on weekends relative to what would be expected under independence,
+# while Business and World articles are under-represented on those same days.
+# Weekdays (Monday to Friday) show much smaller deviations from the expected counts,
+# suggesting that the content mix is more uniform during the working week.
+
 
 #---------- STEP 3: Row and column profiles, decomposition and factor map ----------
 
@@ -314,6 +329,27 @@ col_profiles <- prop.table(contingency_table, margin = 2)
 print("Column profiles (proportion of each day per channel):")
 print(round(col_profiles, 3))
 
+# --- INTERPRETATION: Row and column profiles ---
+# The row profiles show that the channel mix for weekdays (Mon-Fri) is very similar
+# to each other: approximately 25% Tech, 21% Entertainment, 17% Business,
+# 19% World, 10% Lifestyle and 7% Social Media in each day.
+# This similarity means that from a row-profile perspective, weekdays are almost
+# interchangeable and will appear close together in the CA plot.
+
+# The weekend days (Saturday and Sunday) stand out clearly:
+# - Lifestyle has a notably higher share on weekends (~16% Sat, ~15% Sun)
+#   compared to weekdays (~10%), indicating a preference for publishing
+#   lifestyle content at the end of the week.
+# - Business articles drop to ~14% on weekends versus ~17% on weekdays,
+#   suggesting that business-oriented content is less common when readers
+#   are not at work.
+# - Social Media articles also see a slight weekend increase (~10% Sat, ~9% Sun).
+
+# The column profiles confirm this weekend effect from the other direction:
+# Saturday and Sunday together account for only about 4-9% of articles in
+# each channel, but their relative weight is higher in Lifestyle than in
+# Business or World, reinforcing the pattern found in the row profiles.
+
 # We now apply the CA() function from the FactoMineR package.
 # This function takes the contingency table and performs the singular value
 # decomposition of the high-dimensional space of profiles, creating new dimensions
@@ -332,6 +368,15 @@ print(summary(ca_result))
 # as these will be used for the graphical representation.
 print("Variance explained by each dimension (inertia):")
 print(ca_result$eig)
+
+# --- INTERPRETATION: Eigenvalues and inertia ---
+# The CA produces a maximum of 5 dimensions (min(7-1, 6-1) = 5).
+# Dimension 1 alone explains 97.4% of the total inertia, and Dimension 2 explains
+# a further 2.2%, meaning the first two dimensions together capture 99.5%
+# of all the association between publication day and thematic channel.
+# This is a very strong result: the two-dimensional factor map we will produce
+# next is almost a perfect representation of the full structure of the data,
+# and no information is lost by focusing on the first two dimensions.
 
 
 #---------- STEP 4: Graphical representation and interpretation ----------
@@ -370,3 +415,52 @@ print(round(ca_result$row$contrib, 3))
 
 print("Contributions of channels (columns) to the dimensions:")
 print(round(ca_result$col$contrib, 3))
+
+# --- INTERPRETATION: Factor map (biplot), contributions and quality ---
+
+# DIMENSION 1 (97.4% of inertia):
+# This dimension is almost entirely driven by Saturday (contribution: 59.2%)
+# and Sunday (contribution: 31.1%), which together account for 90.3% of the
+# variation captured by Dim 1. Both weekend days have large positive coordinates
+# on Dim 1 (Saturday: +0.201, Sunday: +0.162), placing them far to the right
+# of the origin in the factor map.
+# On the channel side, Lifestyle has by far the largest contribution to Dim 1
+# (62.7%) and a positive coordinate (+0.137), meaning it is pulled in the same
+# direction as the weekend days. This confirms that Lifestyle content is the
+# channel most distinctly associated with weekend publishing.
+# By contrast, Business (coord: -0.048) and World (coord: -0.044) have negative
+# coordinates on Dim 1, placing them on the opposite side from the weekend days,
+# reinforcing that these channels are more characteristic of weekday publishing.
+# All weekdays (Mon-Fri) have small negative coordinates on Dim 1 and cluster
+# close to the origin, reflecting their very similar and average channel mix.
+
+# DIMENSION 2 (2.2% of inertia):
+# Although it explains very little additional inertia, Dim 2 is dominated by
+# Monday (contribution: 54.2%) on the row side, and Entertainment (contribution:
+# 54.9%) on the column side. Monday has a negative coordinate on Dim 2 (-0.015)
+# while Entertainment also has a negative coordinate (-0.014), suggesting a
+# slight tendency for Entertainment articles to be over-represented on Mondays
+# compared to the rest of the working week.
+
+# QUALITY OF REPRESENTATION (cos2):
+# The cos2 values confirm that most categories are very well represented in the
+# two-dimensional space. Saturday (cos2 Dim1: 0.998) and Sunday (cos2 Dim1: 0.988)
+# are almost perfectly captured by Dim 1 alone. Among channels, Lifestyle (0.999),
+# Tech (0.938), Business (0.941) and Social Media (0.979) are all excellently
+# represented on Dim 1.
+# The only category that is somewhat better represented in Dim 2 than Dim 1 is
+# Entertainment (cos2 Dim1: 0.059, Dim2: 0.923), which explains why Dim 2 is
+# mainly driven by that channel.
+
+# OVERALL CONCLUSION:
+# The CA reveals that the main structural difference in the dataset is between
+# weekdays and weekends, rather than among individual weekdays themselves.
+# Saturday and Sunday are strongly associated with Lifestyle content, while
+# Business, World, and Tech articles are more characteristic of the working week.
+# The five working days are very similar to each other and all cluster near the
+# origin of the factor map, indicating that their channel distribution is close
+# to the overall average.
+# Social Media shows a mild weekend association, although much weaker than Lifestyle.
+# Entertainment stands out as the channel with the most uniform distribution
+# across all days, being primarily distinguished along Dimension 2 and showing
+# no strong preference for any particular day.
