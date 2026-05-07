@@ -369,6 +369,10 @@ print(summary(ca_result))
 print("Variance explained by each dimension (inertia):")
 print(ca_result$eig)
 
+# The total inertia summarises the overall association between the two variables.
+# It equals the sum of all eigenvalues and is analogous to total variance in PCA.
+cat("Total inertia:", round(sum(ca_result$eig[, 1]), 6), "\n")
+
 # --- INTERPRETATION: Eigenvalues and inertia ---
 # The CA produces a maximum of 5 dimensions (min(7-1, 6-1) = 5).
 # Dimension 1 alone explains 97.4% of the total inertia, and Dimension 2 explains
@@ -415,6 +419,24 @@ print(round(ca_result$row$contrib, 3))
 
 print("Contributions of channels (columns) to the dimensions:")
 print(round(ca_result$col$contrib, 3))
+
+# We also print the coordinates of rows and columns on the first two dimensions.
+# These values are the actual positions of each category in the factor map,
+# and are used to interpret the direction and distance from the origin.
+print("Coordinates of days (rows) on Dim 1 and Dim 2:")
+print(round(ca_result$row$coord[, 1:2], 3))
+
+print("Coordinates of channels (columns) on Dim 1 and Dim 2:")
+print(round(ca_result$col$coord[, 1:2], 3))
+
+# The cos2 (squared cosine) measures the quality of representation of each category
+# in the two-dimensional space. Values close to 1 mean the category is well
+# represented; values close to 0 mean it is poorly captured by the first two dimensions.
+print("Quality of representation (cos2) - days (rows):")
+print(round(ca_result$row$cos2[, 1:2], 3))
+
+print("Quality of representation (cos2) - channels (columns):")
+print(round(ca_result$col$cos2[, 1:2], 3))
 
 # --- INTERPRETATION: Factor map (biplot), contributions and quality ---
 
