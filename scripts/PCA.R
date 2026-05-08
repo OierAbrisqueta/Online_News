@@ -1,5 +1,6 @@
 library(dplyr)
 library(ggplot2)
+library(factoextra)
 
 setwd("./data")
 
@@ -449,3 +450,55 @@ abline(h = 0, v = 0, lty = 2)
 # and n_tokens_content and num_hrefs pointing downward, confirming that PC2
 # captures the opposition between article length and minimum positive polarity
 #(as said before in the correlation analysis)
+
+
+#CLUSTERING
+#K-Means clustering
+
+#Hierarchical clustering
+cat("\nThe lenght of the data frame we are working with is: ", nrow(PCs_final), "\n")
+
+#35400 obervations are too many for the hierarchical clustering algorith, 
+#owing to the fact that it has a time complexity of O(n^3) or O(n^2logn) and a space complexity
+#of O(n^2). We use a reproducible (with seed 1234) random sample of 2000 observation,
+#which is large enough to capture to find the structure and paterns in the original data frame.
+set.seed(1234)
+n <- 2000
+index <- sample(1:nrow(PCs_final), n)
+
+#We extract the observations with those indexes to create the new table
+PCs_sample <- PCs_final[index,]
+pca_vars_sample <- pca_vars[index,]
+
+#Before computing the final distance matrix, we compare the three following distance
+#metrics: Euclidean, Manhattan and Chebyshev
+calculate_distance <- function(m) {
+  return(dist(PCs_sample, method = m))
+}
+
+distance_methods <- c("euclidean", "manhattan", "maximum")
+
+#Compute the 3 distance matrixes
+dist_matrix_list <- lapply(distance_methods, calculate_distance)
+names(dist_matrix_list) <- distance_methods
+
+fviz_nbclust(as.matrix(dist_matrix_list[["euclidean"]]),
+             FUNcluster = hcut,
+             method = "silhouette",
+             hc_func = "hclust",
+             hc_method = "complete",
+             k.max = 10)
+
+fviz_nbclust(as.matrix(dist_matrix_list[["manhattan"]]),
+             FUNcluster = hcut,
+             method = "silhouette",
+             hc_func = "hclust",
+             hc_method = "complete",
+             k.max = 10)
+
+fviz_nbclust(as.matrix(dist_matrix_list[["maximum"]]),
+             FUNcluster = hcut,
+             method = "silhouette",
+             hc_func = "hclust",
+             hc_method = "complete",
+             k.max = 10)
