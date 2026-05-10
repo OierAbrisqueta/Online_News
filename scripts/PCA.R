@@ -512,17 +512,15 @@ PCs_final <- as.data.frame(PCs_final)
 
 # We will assign the cluster to each of the observation so that we can work with
 # them.
-df <- PCs_final
-df$clus <- as.factor(k4$cluster)
-df$clus <- factor(df$clus)
-
-head(PCs_final)
+df_clus <- PCs_final
+df_clus$clus <- as.factor(k4$cluster)
+df_clus$clus <- factor(df_clus$clus)
 
 # We will plot the clusters in two dimensions(PC1, PC2) so that can visually
 # differentiate the clusters.
 
 # All observations
-ggplot(df, aes(x= V1, y = V2, colour = clus)) +
+ggplot(df_clus, aes(x= V1, y = V2, colour = clus)) +
   geom_point(alpha = 0.5) +
   stat_ellipse(aes(fill = clus), geom = "polygon",
                alpha = 0.08, level = 0.95, show.legend = FALSE) +
@@ -545,24 +543,48 @@ ggplot(df, aes(x= V1, y = V2, colour = clus)) +
 # To visually see the relation between the clusters and the variables we will
 # plot them using parallel coordinates plot, where each line represents each
 # cluster and each point of the line the average of the cluster in each PC.
-colnames(df)
-data_long <- gather(df, PCs, valor, V1:V7, factor_key = T)
+colnames(df_clus)
+data_long <- gather(df_clus, PCs, valor, V1:V7, factor_key = T)
 data_long
 
 ggplot(data_long, aes(as.factor(x=PCs), y=valor, group=clus, colour=clus)) +
   stat_summary(fun=mean, geom="pointrange", size=1) +
   stat_summary(geom="line")
 
-# With this plot we can easily see how has each clusters been grouped. Considering
-# the explanations of the PCs in the PCA we can conclude that:
+pca_vars_c <- as.data.frame(scale(pca_vars))
+pca_vars_c$Cluster <- factor(df_clus$clus)
 
-# Cluster 1: It's the most extreme and minority cluster. Articles with highly
-# emotional content and a heavy multimedia load.
-# Cluster 2: Long, positive, and subjective articles with a completely ordinary
-# keyword and multimedia profile.
-# Cluster 3: Short, moderately positive articles with low-popular keywords.
-# Cluster 4: Objective and neutral articles without any noteworthy editorial
-# features.
+# Although the profile plot of cluster means across principal components 
+# provides a useful visual overview of how clusters differ in the PC space, 
+# it does not allow us to directly conclude which original variables drive 
+# each cluster. This is because each PC is a linear combination of all original 
+# variables, and a cluster may have an extreme value on a given PC due to the 
+# combined effect of multiple variables rather than the ones most correlated 
+# with that component. For this reason, the cluster interpretation is based on 
+# the standardised means of the original variables, visualised in the heatmap, 
+# which provides a direct and unambiguous description of each cluster's profile.
+
+km_cluster_means <- pca_vars_c %>% 
+  group_by(Cluster) %>% 
+  summarise(across(where(is.numeric), mean), .groups = "drop")
+
+plotting_data <- km_cluster_means %>% 
+  pivot_longer(-Cluster, names_to = "Variable", values_to = "Mean")
+
+ggplot(plotting_data, aes(x = Variable, y = Cluster, fill = Mean)) +
+  geom_tile(colour = "white", linewidth = 0.5) +
+  geom_text(aes(label = round(Mean, 2)), size = 3, colour = "black") +
+  scale_fill_gradient2(low      = "blue",
+                       mid      = "white",
+                       high     = "red",
+                       midpoint = 0,
+                       name     = "z-score\n(cluster mean)") +
+  labs(
+    title = "Cluster Interpretation: Standarised Mean per Variable",
+    y = "Cluster"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 40, hjust = 1, size = 9))
 
 #---------------------------HIERARCHICAL CLUSTERING-----------------------------
 
