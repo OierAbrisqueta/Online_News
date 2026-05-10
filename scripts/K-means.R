@@ -1,13 +1,13 @@
 library(dplyr)
 library(ggplot2)
 library(factoextra)
-library(tidyr)
 library(FactoMineR)
+library(NbClust)
+library(tidyr)
 
 setwd("./data")
 
 data <- read.csv("OnlineNewsPopularity.csv", strip.white=T)
-
 head(data)
 summary(data)
 
@@ -16,6 +16,8 @@ quantile(data$shares,c(0.05,0.25,0.5,0.75,0.95,0.995))
 data_clean <- data
 nrow(data_clean)
 
+
+# En el histograma podemos ver que es asimetrico (right skew) porque la media es mayor a la mediana.
 boxplot(data_clean$shares)
 hist(data_clean$shares)
 
@@ -26,12 +28,14 @@ plot(d)
 
 # CATEGORICAL DATA
 
+# Variables de días de la semana
 weekdays <- c(
   'weekday_is_monday', 'weekday_is_tuesday', 'weekday_is_wednesday',
   'weekday_is_thursday', 'weekday_is_friday', 'weekday_is_saturday',
   'weekday_is_sunday'
 )
 
+# Crear una columna con categorica para el dia de la semana que sea
 weekday_labels <- c(
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
   'Saturday', 'Sunday'
@@ -212,7 +216,6 @@ colnames(data_clean)
 
 
 # First, we compute the correlation matrix of the candidate variables
-
 candidate_vars <- data_clean %>%
   select(n_tokens_content, num_hrefs, num_imgs, num_videos, num_keywords,
          kw_avg_avg, kw_max_avg, kw_avg_min, kw_min_avg,
@@ -240,7 +243,6 @@ cor(data_clean$kw_avg_avg,data_clean$log_shares)
 # kw_avg_avg has higher correlation with log_shares -> we remove kw_max_avg
 
 cor(data_clean$rate_positive_words,data_clean$log_shares)
-
 cor(data_clean$rate_negative_words,data_clean$log_shares)
 
 # Very similar -> we remove rate_negative_words
@@ -284,7 +286,6 @@ rownames(PCloadings) <- colnames(pca_vars) # To remind us of the interpretation 
 PCs <- X %*% PCloadings #We compute the principal components by the matrix multiplication of X and the loadings
 
 variance_explained <- 100 * E$values / sum(E$values) 
-variance_explained
 cum_variance_explained <- cumsum(variance_explained)
 
 #-----------------------PC analysis and interpretation------------------------------
@@ -295,7 +296,7 @@ cum_variance_explained <- cumsum(variance_explained)
 plot(cum_variance_explained,type="b",col="blue",ylim=c(0,100),xlab="Component index",ylab="Percentage",xaxt="n")
 lines(variance_explained,type="b",col="red")
 axis(1,at=1:length(cum_variance_explained))
-legend(7.3, 60, legend=c("Cumul. variance explained", "Variance explained"),
+legend(7.4, 60, legend=c("Cumul. variance explained", "Variance explained"),
        col=c("blue", "red"), lty=1:2, cex=0.8)
 
 # The scree (or elbow) plot reveals that no single component dominates the variance explanation,
@@ -454,6 +455,7 @@ abline(h = 0, v = 0, lty = 2)
 # captures the opposition between article length and minimum positive polarity
 #(as said before in the correlation analysis)
 
+
 #----------------------------------------------------------------
 # CLUSTERING
 #----------------------------------------------------------------
@@ -461,7 +463,7 @@ abline(h = 0, v = 0, lty = 2)
 #---------------------------K-MEANS------------------------------
 
 ### Setting random seed for reproducibility of randomly generated quantities
-set.seed(123)
+set.seed(555)
 
 # For the clustering we will use the PCs_final matrix with the dimensionality
 # reduced
@@ -563,293 +565,3 @@ ggplot(data_long, aes(as.factor(x=PCs), y=valor, group=clus, colour=clus)) +
 # Cluster 3: Short, moderately positive articles with low-popular keywords.
 # Cluster 4: Objective and neutral articles without any noteworthy editorial
 # features.
-
-#---------------------------HIERARCHICAL CLUSTERING-----------------------------
-
-cat("\nThe lenght of the data frame we are working with is: ", nrow(PCs_final), "\n")
-
-#35400 obervations are too many for the hierarchical clustering algorithm, 
-#owing to the fact that it has a time complexity of O(n^3) or O(n^2logn) and a space complexity
-#of O(n^2). We use a reproducible (with seed 1234) random sample of 2000 observation,
-#which is large enough to capture the structure and patterns in the original data frame.
-set.seed(555)
-n <- 2000
-index <- sample(1:nrow(PCs_final), n)
-
-#We extract the observations with those indexes to create the new table
-PCs_sample <- PCs_final[index,]
-pca_vars_sample <- pca_vars[index,]
-
-#Filter outliers
-#We plot the different PCs in order to filter outliers that
-#can lead the hierarchical algorithm into misinterpretations
-plot(PCs_sample[,1], PCs_sample[,2],
-     main = "Outliers in PCA",
-     xlab = "PC1",
-     ylab = "PC2",
-     pch = 19,
-     col = "blue")
-
-plot(PCs_sample[,3], PCs_sample[,4],
-     main = "Outliers in PCA",
-     xlab = "PC1",
-     ylab = "PC2",
-     pch = 19,
-     col = "blue")
-
-filtro_outliers <- PCs_sample[, 1] < 5 & PCs_sample[, 1] > -5 & PCs_sample[, 2] < 5 & PCs_sample[, 2] > -4.5 & PCs_sample[, 3] > -5 & PCs_sample[, 4] > -10
-PCs_sample_clean <- PCs_sample[filtro_outliers,]
-pca_vars_sample <- pca_vars_sample[filtro_outliers,]
-nrow(PCs_sample_clean)
-nrow(pca_vars_sample)
-#Before computing the final distance matrix, we compare the three following distance
-#metrics: Euclidean, Manhattan and Chebyshev
-calculate_distance <- function(m) {
-  return(dist(PCs_sample_clean, method = m))
-}
-
-distance_methods <- c("euclidean", "manhattan", "maximum")
-
-#Compute the 3 distance matrixes
-dist_matrix_list <- lapply(distance_methods, calculate_distance)
-names(dist_matrix_list) <- distance_methods
-
-fviz_nbclust(PCs_sample_clean,
-             diss = as.matrix(dist_matrix_list[["euclidean"]]),
-             FUNcluster = hcut,
-             method = "silhouette",
-             hc_func = "hclust",
-             hc_method = "complete",
-             k.max = 10)
-
-fviz_nbclust(PCs_sample_clean,
-             diss = as.matrix(dist_matrix_list[["manhattan"]]),
-             FUNcluster = hcut,
-             method = "silhouette",
-             hc_func = "hclust",
-             hc_method = "complete",
-             k.max = 10)
-
-fviz_nbclust(PCs_sample_clean,
-             diss = as.matrix(dist_matrix_list[["maximum"]]),
-             FUNcluster = hcut,
-             method = "silhouette",
-             hc_func = "hclust",
-             hc_method = "complete",
-             k.max = 10)
-
-#The silhouette analysis revealed the absolute peak is for k = 2 and it is
-#for the Manhattan distance metric. However, as it will be discused further afterwards,
-#k = 2 is not what we consider the perfect segmentation. So we will choose k = 4 (this will be discussed later)
-#In this case, euclidean has the highest average silhouette width value.
-
-distance_metric <- "euclidean"
-distance_matrix <- dist_matrix_list[[distance_metric]]
-
-cat("\nThe selected distance metric is", distance_metric, "\n")
-
-#Once we have selected the appropriate distance metric, the next step is to choose
-#between single or complete linkage. 
-
-#For the comparison we perform another silhouette analysis.
-fviz_nbclust(PCs_sample_clean,
-             diss = as.matrix(distance_matrix),
-             FUNcluster = hcut,
-             method = "silhouette",
-             hc_func = "hclust",
-             hc_method = "complete",
-             k.max = 10)
-
-fviz_nbclust(PCs_sample_clean,
-             diss = as.matrix(distance_matrix),
-             FUNcluster = hcut,
-             method = "silhouette",
-             hc_func = "hclust",
-             hc_method = "single",
-             k.max = 10)
-
-#In order to properly select a proper linkage method, we compute the clustering
-#and compare the sizes of the clusters.
-hc_single <- hclust(distance_matrix, method = "single")
-hc_complete <- hclust(distance_matrix, method = "complete")
-
-clusters_single <- cutree(hc_single, k = 4)
-clusters_complete <- cutree(hc_complete, k = 4)
-
-cat("\nSingle Linkage Clusters\n")
-print(table(clusters_single))
-
-cat("\nComplete Linkage Clusters\n")
-print(table(clusters_complete))
-
-#The results for both complete and single linkage have been terrible because both grouped
-# +85% of the observations in the first cluster. Our conclusion on these results are that:
-#1. Single Linkage fails because it ends up merging clusters because there happened to be a path
-#of slightly similar articles connecting them. This concludes in on one giant cluster and a few tiny clusters of extreme values.
-#2. Complete Linkage: even though it could seem safer, our dataset does have extreme values. This will conclude
-#in clusters that are similar and should be merged together not merged and the clusters that are
-#really different merged.
-
-#Given that the both linkage methods taught in class did not produce the results we were looking for
-#we made additional research to identify a suitable alternative.
-
-#We have identified the Ward's method as an addecuate solution for this problem.
-#The ward's method merges two clusters only if that results in the smallest increase in
-#total within cluster variance. This makes this method better for chaining and outlier sensitivity.
-
-hc_ward <- hclust(distance_matrix, method = "ward.D2")
-clusters_ward <- cutree(hc_ward, k = 4)
-
-cat("\nComplete Linkage Clusters\n")
-print(table(clusters_ward))
-
-#We can see that Ward's method is clearly an improvement. 
-#Our next step is to determine the optimal number of clusters.
-
-#Plot dendogram
-
-#We plot the dendogram without labels to make the graph understandable
-plot(hc_ward,
-     main = "Dendrogram",
-     xlab = "Observations",
-     sub = "",
-     ylab = "Height(Distance)",
-     labels = FALSE,
-     hang = -1)
-
-#We compute again the silhouette analysis to confirm our decision.
-fviz_nbclust(PCs_sample_clean,
-             diss = as.matrix(distance_matrix),
-             FUNcluster = hcut,
-             method = "silhouette",
-             hc_func = "hclust",
-             hc_method = "ward.D2",
-             k.max = 10)
-
-#Both methods lead us to the interpretation that a good choice could be to divide it into 4 clusters
-
-#The average silhouette width show worrying results. 0.15 is bellow what is considered weak.
-#This does not necessarily invalidate the analysis, but  means that there is not a strong
-#segmentation of the data. However, the clustering can still reveal tendencies and patterns.
-
-#Final Clustering
-final_k <- 4
-final_model <- hc_ward
-clusters <- cutree(final_model, k = final_k)
-cat("\nFinal Hierarchical Clustering Model\n")
-cat("Final amount of clusters", final_k, "\n")
-cat("Cluster sizes:", "\n")
-print(table(clusters))
-
-#Visualize the clusters: We will plot the following combinations in order to capture enough variance:
-#PC1 and PC2, PC1 and PC2, and PC2 and PC3
-plot_data1 <- data.frame(
-  PC1 <- PCs_sample_clean[,1],
-  PC2 <- PCs_sample_clean[,2],
-  Cluster = factor(clusters)
-)
-
-ggplot(plot_data1, aes(x= PC1, y = PC2, colour = Cluster)) +
-  geom_point(alpha = 0.5) +
-  stat_ellipse(aes(fill = Cluster), geom = "polygon",
-               alpha = 0.08, level = 0.95, show.legend = FALSE) +
-  scale_colour_brewer(palette = "Set1") +
-  scale_fill_brewer(palette   = "Set1") +
-  labs(
-    title = "Hierarchical Clustering Results (PC1 and PC2)",
-    x = "PC1",
-    y = "PC2",
-    colour = "Cluster"
-  ) +
-  scale_colour_brewer(palette = "Set1") +
-  scale_fill_brewer(palette = "Set1") +
-  theme_minimal()
-
-plot_data2 <- data.frame(
-  PC1 <- PCs_sample_clean[,1],
-  PC3 <- PCs_sample_clean[,3],
-  Cluster = factor(clusters)
-)
-
-ggplot(plot_data2, aes(x= PC1, y = PC3, colour = Cluster)) +
-  geom_point(alpha = 0.5) +
-  stat_ellipse(aes(fill = Cluster), geom = "polygon",
-               alpha = 0.08, level = 0.95, show.legend = FALSE) +
-  scale_colour_brewer(palette = "Set1") +
-  scale_fill_brewer(palette   = "Set1") +
-  labs(
-    title = "Hierarchical Clustering Results (PC1 and PC3)",
-    x = "PC1",
-    y = "PC3",
-    colour = "Cluster"
-  ) +
-  scale_colour_brewer(palette = "Set1") +
-  scale_fill_brewer(palette = "Set1") +
-  theme_minimal()
-
-plot_data3 <- data.frame(
-  PC2 <- PCs_sample_clean[,2],
-  PC3 <- PCs_sample_clean[,3],
-  Cluster = factor(clusters)
-)
-
-ggplot(plot_data1, aes(x= PC2, y = PC3, colour = Cluster)) +
-  geom_point(alpha = 0.5) +
-  stat_ellipse(aes(fill = Cluster), geom = "polygon",
-               alpha = 0.08, level = 0.95, show.legend = FALSE) +
-  scale_colour_brewer(palette = "Set1") +
-  scale_fill_brewer(palette   = "Set1") +
-  labs(
-    title = "Hierarchical Clustering Results (PC2 and PC3)",
-    x = "PC2",
-    y = "PC3",
-    colour = "Cluster"
-  ) +
-  scale_colour_brewer(palette = "Set1") +
-  scale_fill_brewer(palette = "Set1") +
-  theme_minimal()
-
-#Cluster Interpretation
-
-
-df <- as.data.frame(PCs_sample_clean)
-df$clus <- as.factor(clusters) 
-data_long <- gather(df, caracteristica, valor, -clus, factor_key = TRUE)
-
-ggplot(data_long, aes(x = caracteristica, y = valor, group = clus, colour = clus)) +
-  stat_summary(fun = mean, geom = "pointrange", size = 1) +
-  stat_summary(fun = mean, geom = "line", linewidth = 1) +
-  theme_minimal() +
-  labs(title = "Perfil de los Clústeres (Medias por Componente)",
-       x = "Componente Principal",
-       y = "Valor Medio",
-       colour = "Clúster")
-
-cluster_data <- as.data.frame(scale(pca_vars_sample))
-cluster_data$Cluster <- factor(clusters)
-
-cluster_means <- cluster_data %>% 
-  group_by(Cluster) %>% 
-  summarise(across(where(is.numeric), mean), .groups = "drop")
-
-print(cluster_means, width = 1000)
-
-#We transform the table for a better understanding of the following heatmap
-plotting_data <- cluster_means %>% 
-  pivot_longer(-Cluster, names_to = "Variable", values_to = "Mean")
-
-#We plot the results for a better understanding
-ggplot(plotting_data, aes(x = Variable, y = Cluster, fill = Mean)) +
-  geom_tile(colour = "white", linewidth = 0.5) +
-  geom_text(aes(label = round(Mean, 2)), size = 3, colour = "black") +
-  scale_fill_gradient2(low      = "blue",
-                       mid      = "white",
-                       high     = "red",
-                       midpoint = 0,
-                       name     = "z-score\n(cluster mean)") +
-  labs(
-    title = "Cluster Interpretation: Standarised Mean per Variable",
-    y = "Cluster"
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 40, hjust = 1, size = 9))
