@@ -486,3 +486,61 @@ print(round(ca_result$col$cos2[, 1:2], 3))
 # Entertainment stands out as the channel with the most uniform distribution
 # across all days, being primarily distinguished along Dimension 2 and showing
 # no strong preference for any particular day.
+
+#K-means Clustering 
+
+#Extract the coordinates for the days, we only take into account the first 2 dimensions
+#As the CA has suggested to
+day_coords <- ca_result$row$coord[,1:2]
+
+cat("\nCA row corrdinates for each day of the week\n")
+print(day_coords)
+
+#We use the elbow and the silhouette method to determine the number of clusters
+fviz_nbclust(
+  day_coords,
+  FUNcluster = kmeans,
+  nstart = 20,
+  method = "wss",
+  k.max = 5
+) +
+  labs(
+    title = "Elbow Method"
+  )
+
+fviz_nbclust(
+  day_coords,
+  FUNcluster = kmeans,
+  nstart = 20,
+  method = "silhouette",
+  k.max = 5
+) +
+  labs(
+    title = "Silhouette Method"
+  )
+
+#By analyzing both methods, we have come to the conclusion that the optimal number
+#of clusters is 2. Because if we selected k = 3, which is the result that the elbow method
+#considers optimal, we would divide the weekend in 2. This happens because the saturday and the sunday
+#are widely separated in the Dim2 row. However, Dim2 explains only 2.2% of the inertia, whereas Dim1
+#97.4% of it. That is why we have taken this decision. On top of that, the silhouette method
+#considers optimal to have 2 clusters.
+k <- 2
+
+#Seed 123 is set to ensure that the results are repoducible
+set.seed(1234)
+kmodel <- kmeans(day_coords, centers = k, nstart = 20)
+
+cat("\nCluster Assignment Per Day\n")
+print(kmodel$cluster)
+
+#We visualize the k = 2 solution
+fviz_ca_row(
+  ca_result,
+  repel = TRUE,
+  col.row = as.factor(kmodel$cluster),
+  title = "Days clustered on CA map"
+)
+
+#In conclusion, the clustering groups weekdays and weekends on separate clusters
+#based on the media channels.
