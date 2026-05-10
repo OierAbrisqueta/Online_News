@@ -460,10 +460,10 @@ abline(h = 0, v = 0, lty = 2)
 #Hierarchical clustering
 cat("\nThe lenght of the data frame we are working with is: ", nrow(PCs_final), "\n")
 
-#35400 obervations are too many for the hierarchical clustering algorith, 
+#35400 obervations are too many for the hierarchical clustering algorithm, 
 #owing to the fact that it has a time complexity of O(n^3) or O(n^2logn) and a space complexity
 #of O(n^2). We use a reproducible (with seed 1234) random sample of 2000 observation,
-#which is large enough to capture to find the structure and paterns in the original data frame.
+#which is large enough to capture the structure and patterns in the original data frame.
 set.seed(555)
 n <- 2000
 index <- sample(1:nrow(PCs_final), n)
@@ -472,7 +472,7 @@ index <- sample(1:nrow(PCs_final), n)
 PCs_sample <- PCs_final[index,]
 pca_vars_sample <- pca_vars[index,]
 
-#Filtro outliers
+#Filter outliers
 #We plot the different PCs in order to filter outliers that
 #can lead the hierarchical algorithm into misinterpretations
 plot(PCs_sample[,1], PCs_sample[,2],
@@ -511,7 +511,7 @@ fviz_nbclust(PCs_sample_clean,
              FUNcluster = hcut,
              method = "silhouette",
              hc_func = "hclust",
-             hc_method = "ward.D2",
+             hc_method = "complete",
              k.max = 10)
 
 fviz_nbclust(PCs_sample_clean,
@@ -519,7 +519,7 @@ fviz_nbclust(PCs_sample_clean,
              FUNcluster = hcut,
              method = "silhouette",
              hc_func = "hclust",
-             hc_method = "ward.D2",
+             hc_method = "complete",
              k.max = 10)
 
 fviz_nbclust(PCs_sample_clean,
@@ -527,21 +527,18 @@ fviz_nbclust(PCs_sample_clean,
              FUNcluster = hcut,
              method = "silhouette",
              hc_func = "hclust",
-             hc_method = "ward.D2",
+             hc_method = "complete",
              k.max = 10)
 
 #The silhouette analysis revealed the absolute peak is for k = 2 and it is
 #for the Manhattan distance metric. However, as it will be discused further afterwards,
 #k = 2 is not what we consider the perfect segmentation. So we will choose k = 4 (this will be discussed later)
-#however Manhattan has as well the highest average silhouette width for 4 clusters. Therefore,
-#we select Manhattan distance matrix to construct the hierarchical model.
+#In this case, euclidean has the highest average silhouette width value.
 
 distance_metric <- "euclidean"
 distance_matrix <- dist_matrix_list[[distance_metric]]
 
 cat("\nThe selected distance metric is", distance_metric, "\n")
-
-heatmap(as.matrix(distance_matrix), Rowv = NA, Colv = NA)
 
 #Once we have selected the appropriate distance metric, the next step is to choose
 #between single or complete linkage. 
@@ -563,10 +560,7 @@ fviz_nbclust(PCs_sample_clean,
              hc_method = "single",
              k.max = 10)
 
-#It is impossible to decide between single or complete linkage visually through this analysis
-#owing to the fact that both present visually equal values for k = 4.
-
-#So in order to properly select a proper linkage method, we compute the clustering
+#In order to properly select a proper linkage method, we compute the clustering
 #and compare the sizes of the clusters.
 hc_single <- hclust(distance_matrix, method = "single")
 hc_complete <- hclust(distance_matrix, method = "complete")
@@ -583,7 +577,7 @@ print(table(clusters_complete))
 #The results for both complete and single linkage have been terrible because both grouped
 # +85% of the observations in the first cluster. Our conclusion on these results are that:
 #1. Single Linkage fails because it ends up merging clusters because there happened to be a path
-#of slightly similar articles connecting them. This concludes in on one giant cluster and a few tiny clusters of extrem outliers.
+#of slightly similar articles connecting them. This concludes in on one giant cluster and a few tiny clusters of extreme values.
 #2. Complete Linkage: even though it could seem safer, our dataset does have extreme values. This will conclude
 #in clusters that are similar and should be merged together not merged and the clusters that are
 #really different merged.
@@ -624,7 +618,7 @@ fviz_nbclust(PCs_sample_clean,
              hc_method = "ward.D2",
              k.max = 10)
 
-#Both methods show that the best choice would be to divide it into 4 clusters
+#Both methods lead us to the interpretation that a good choice could be to divide it into 4 clusters
 
 #The average silhouette width show worrying results. 0.15 is bellow what is considered weak.
 #This does not necessarily invalidate the analysis, but  means that there is not a strong
@@ -708,6 +702,21 @@ ggplot(plot_data1, aes(x= PC2, y = PC3, colour = Cluster)) +
   theme_minimal()
 
 #Cluster Interpretation
+
+
+df <- as.data.frame(PCs_sample_clean)
+df$clus <- as.factor(clusters) 
+data_long <- gather(df, caracteristica, valor, -clus, factor_key = TRUE)
+
+ggplot(data_long, aes(x = caracteristica, y = valor, group = clus, colour = clus)) +
+  stat_summary(fun = mean, geom = "pointrange", size = 1) +
+  stat_summary(fun = mean, geom = "line", linewidth = 1) +
+  theme_minimal() +
+  labs(title = "Perfil de los Clústeres (Medias por Componente)",
+       x = "Componente Principal",
+       y = "Valor Medio",
+       colour = "Clúster")
+
 cluster_data <- as.data.frame(scale(pca_vars_sample))
 cluster_data$Cluster <- factor(clusters)
 
